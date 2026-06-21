@@ -7,19 +7,28 @@ interface PageStatsPanelProps {
 }
 
 export function PageStatsPanel({ records }: PageStatsPanelProps) {
-  const completedRecords = records.filter((r) => r.score > 0);
-  const stats = getPageUniformity(completedRecords);
+  const stats = getPageUniformity(records);
+
+  const completedCount = records.filter(
+    (r) => r.score > 0 && r.completedAt > 0
+  ).length;
 
   const getUniformityLabel = (score: number) => {
-    if (score >= 85) return { text: '非常均匀', color: 'text-green-600', bg: 'bg-green-100' };
-    if (score >= 70) return { text: '比较均匀', color: 'text-blue-600', bg: 'bg-blue-100' };
-    if (score >= 50) return { text: '一般', color: 'text-amber-600', bg: 'bg-amber-100' };
+    if (score >= 85)
+      return { text: '非常均匀', color: 'text-green-600', bg: 'bg-green-100' };
+    if (score >= 70)
+      return { text: '比较均匀', color: 'text-blue-600', bg: 'bg-blue-100' };
+    if (score >= 50)
+      return { text: '一般', color: 'text-amber-600', bg: 'bg-amber-100' };
     return { text: '波动较大', color: 'text-red-600', bg: 'bg-red-100' };
   };
 
   const uniformityInfo = getUniformityLabel(stats.overallUniformity);
 
-  if (completedRecords.length === 0) {
+  const getRecordByGridIndex = (gridIndex: number) =>
+    records.find((r) => r.gridIndex === gridIndex);
+
+  if (completedCount === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-lg border border-amber-100 overflow-hidden">
         <div className="p-4 border-b border-amber-100 bg-gradient-to-r from-purple-50 to-pink-50">
@@ -39,6 +48,17 @@ export function PageStatsPanel({ records }: PageStatsPanelProps) {
     );
   }
 
+  const bestRecords = stats.bestGrids
+    .map((idx) => getRecordByGridIndex(idx))
+    .filter((r): r is GridWritingRecord => r !== undefined && r.score > 0);
+
+  const worstRecords = stats.worstGrids
+    .map((idx) => getRecordByGridIndex(idx))
+    .filter(
+      (r): r is GridWritingRecord =>
+        r !== undefined && r.score > 0 && !stats.bestGrids.includes(r.gridIndex)
+    );
+
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-amber-100 overflow-hidden">
       <div className="p-4 border-b border-amber-100 bg-gradient-to-r from-purple-50 to-pink-50">
@@ -49,7 +69,7 @@ export function PageStatsPanel({ records }: PageStatsPanelProps) {
           <BarChart3 className="w-5 h-5 text-purple-500" />
           整页统计
           <span className="text-xs font-normal text-gray-400 ml-auto">
-            已完成 {completedRecords.length} 格
+            已完成 {completedCount} 格
           </span>
         </h2>
       </div>
@@ -61,7 +81,9 @@ export function PageStatsPanel({ records }: PageStatsPanelProps) {
               <Activity className="w-4 h-4 text-purple-500" />
               书写均匀度
             </span>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${uniformityInfo.bg} ${uniformityInfo.color}`}>
+            <span
+              className={`text-xs font-medium px-2 py-0.5 rounded-full ${uniformityInfo.bg} ${uniformityInfo.color}`}
+            >
               {uniformityInfo.text}
             </span>
           </div>
@@ -93,52 +115,50 @@ export function PageStatsPanel({ records }: PageStatsPanelProps) {
           </div>
         </div>
 
-        {stats.bestGrids.length > 0 && (
+        {bestRecords.length > 0 && (
           <div>
             <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
               <Trophy className="w-3.5 h-3.5 text-amber-500" />
               写得最好的
             </p>
             <div className="flex gap-2">
-              {stats.bestGrids.slice(0, 3).map((gridIdx) => {
-                const record = completedRecords.find((r) => r.gridIndex === gridIdx);
-                return (
-                  <div
-                    key={gridIdx}
-                    className="flex-1 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg p-2 text-center border border-amber-200"
-                  >
-                    <p className="text-xs text-amber-600">第{gridIdx + 1}格</p>
-                    <p className="text-lg font-bold text-amber-700">
-                      {record?.score ?? 0}分
-                    </p>
-                  </div>
-                );
-              })}
+              {bestRecords.map((record) => (
+                <div
+                  key={record.gridIndex}
+                  className="flex-1 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-lg p-2 text-center border border-amber-200"
+                >
+                  <p className="text-xs text-amber-600">
+                    第{record.gridIndex + 1}格
+                  </p>
+                  <p className="text-lg font-bold text-amber-700">
+                    {record.score}分
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {stats.worstGrids.length > 0 && stats.worstGrids.some((w) => w !== stats.bestGrids[0]) && (
+        {worstRecords.length > 0 && (
           <div>
             <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
               <ThumbsDown className="w-3.5 h-3.5 text-gray-500" />
               需要加强的
             </p>
             <div className="flex gap-2">
-              {stats.worstGrids.slice(0, 3).filter((w) => !stats.bestGrids.slice(0, 3).includes(w)).map((gridIdx) => {
-                const record = completedRecords.find((r) => r.gridIndex === gridIdx);
-                return (
-                  <div
-                    key={gridIdx}
-                    className="flex-1 bg-gray-50 rounded-lg p-2 text-center border border-gray-200"
-                  >
-                    <p className="text-xs text-gray-500">第{gridIdx + 1}格</p>
-                    <p className="text-lg font-bold text-gray-600">
-                      {record?.score ?? 0}分
-                    </p>
-                  </div>
-                );
-              })}
+              {worstRecords.map((record) => (
+                <div
+                  key={record.gridIndex}
+                  className="flex-1 bg-gray-50 rounded-lg p-2 text-center border border-gray-200"
+                >
+                  <p className="text-xs text-gray-500">
+                    第{record.gridIndex + 1}格
+                  </p>
+                  <p className="text-lg font-bold text-gray-600">
+                    {record.score}分
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         )}

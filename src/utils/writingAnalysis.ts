@@ -3,6 +3,7 @@ import {
   StrokeAnalysis,
   StrokeMetrics,
   WritingAnalysis,
+  GridWritingRecord,
 } from '@/types';
 
 function calculateStrokeMetrics(
@@ -294,7 +295,7 @@ export function analyzeWriting(paths: PathPoint[][]): WritingAnalysis {
   return analysis;
 }
 
-export function getPageUniformity(records: { score: number; analysis: WritingAnalysis | null }[]): {
+export function getPageUniformity(records: GridWritingRecord[]): {
   avgScore: number;
   scoreVariance: number;
   avgSpeed: number;
@@ -303,7 +304,9 @@ export function getPageUniformity(records: { score: number; analysis: WritingAna
   bestGrids: number[];
   worstGrids: number[];
 } {
-  if (records.length === 0) {
+  const validRecords = records.filter((r) => r.score > 0 && r.completedAt > 0);
+
+  if (validRecords.length === 0) {
     return {
       avgScore: 0,
       scoreVariance: 0,
@@ -315,11 +318,11 @@ export function getPageUniformity(records: { score: number; analysis: WritingAna
     };
   }
 
-  const scores = records.map((r) => r.score);
+  const scores = validRecords.map((r) => r.score);
   const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
   const scoreVariance = calculateVariance(scores);
 
-  const validAnalyses = records
+  const validAnalyses = validRecords
     .filter((r) => r.analysis !== null)
     .map((r) => r.analysis!);
 
@@ -347,12 +350,10 @@ export function getPageUniformity(records: { score: number; analysis: WritingAna
     (scoreUniformity + avgUniformity) / 2
   );
 
-  const scoredIndices = records
-    .map((r, i) => ({ index: i, score: r.score }))
-    .sort((a, b) => b.score - a.score);
+  const sortedRecords = [...validRecords].sort((a, b) => b.score - a.score);
 
-  const bestGrids = scoredIndices.slice(0, 3).map((s) => s.index);
-  const worstGrids = scoredIndices.slice(-3).reverse().map((s) => s.index);
+  const bestGrids = sortedRecords.slice(0, 3).map((r) => r.gridIndex);
+  const worstGrids = sortedRecords.slice(-3).reverse().map((r) => r.gridIndex);
 
   return {
     avgScore: Math.round(avgScore),
