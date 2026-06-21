@@ -304,7 +304,7 @@ export function getPageUniformity(records: GridWritingRecord[]): {
   bestGrids: number[];
   worstGrids: number[];
 } {
-  const validRecords = records.filter((r) => r.score > 0 && r.completedAt > 0);
+  const validRecords = records.filter((r) => r.completedAt > 0);
 
   if (validRecords.length === 0) {
     return {

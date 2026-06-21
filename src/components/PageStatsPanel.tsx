@@ -9,9 +9,7 @@ interface PageStatsPanelProps {
 export function PageStatsPanel({ records }: PageStatsPanelProps) {
   const stats = getPageUniformity(records);
 
-  const completedCount = records.filter(
-    (r) => r.score > 0 && r.completedAt > 0
-  ).length;
+  const completedCount = records.filter((r) => r.completedAt > 0).length;
 
   const getUniformityLabel = (score: number) => {
     if (score >= 85)
@@ -50,13 +48,13 @@ export function PageStatsPanel({ records }: PageStatsPanelProps) {
 
   const bestRecords = stats.bestGrids
     .map((idx) => getRecordByGridIndex(idx))
-    .filter((r): r is GridWritingRecord => r !== undefined && r.score > 0);
+    .filter((r): r is GridWritingRecord => r !== undefined && r.completedAt > 0 && r.score > 0);
 
   const worstRecords = stats.worstGrids
     .map((idx) => getRecordByGridIndex(idx))
     .filter(
       (r): r is GridWritingRecord =>
-        r !== undefined && r.score > 0 && !stats.bestGrids.includes(r.gridIndex)
+        r !== undefined && r.completedAt > 0 && !stats.bestGrids.includes(r.gridIndex)
     );
 
   return (
